@@ -5,6 +5,7 @@ import { dbAll, dbPut, dbDelete } from '../db.js';
 import { audioCtx } from '../utils/sound.js';
 import { icon, esc, toast } from '../ui.js';
 import { getTimer } from './pomodoro.js';
+import { t } from '../i18n.js';
 
 const DEFAULTS = {
   source: 'ambient',
@@ -72,7 +73,7 @@ const uploadSource = {
     if (!tracks.length) {
       // Autoplay dari timer tidak boleh memunculkan panel; hanya saat diklik pengguna.
       if (!auto) {
-        toast('Upload file musik terlebih dahulu');
+        toast(t('Upload music files first'));
         openPanel();
       }
       return false;
@@ -89,11 +90,11 @@ const uploadSource = {
 // ---------------------------------------------------------------- Ambient
 
 const CHANNELS = {
-  rain: { label: 'Hujan', scale: 0.9 },
-  ocean: { label: 'Ombak', scale: 1 },
-  white: { label: 'White noise', scale: 0.18 },
-  pink: { label: 'Pink noise', scale: 0.45 },
-  brown: { label: 'Brown noise', scale: 0.9 },
+  rain: { label: t('Rain'), scale: 0.9 },
+  ocean: { label: t('Waves'), scale: 1 },
+  white: { label: t('White noise'), scale: 0.18 },
+  pink: { label: t('Pink noise'), scale: 0.45 },
+  brown: { label: t('Brown noise'), scale: 0.9 },
 };
 let buffers = null;
 let ambient = null;
@@ -256,7 +257,7 @@ function loadYtApi() {
     s.src = 'https://www.youtube.com/iframe_api';
     s.onerror = () => {
       ytApi = null;
-      reject(new Error('Tidak bisa memuat YouTube (offline?)'));
+      reject(new Error(t('Could not load YouTube (offline?)')));
     };
     document.head.append(s);
   });
@@ -340,25 +341,25 @@ const ytKey = (parsed) => parsed.list || parsed.id;
 
 async function addYt(url, name) {
   const parsed = parseYouTube(url);
-  if (!parsed) return toast('Link YouTube tidak valid', { type: 'error' });
+  if (!parsed) return toast(t('Invalid YouTube link'), { type: 'error' });
   const existing = settings.ytSaved.find((x) => {
     const p = parseYouTube(x.url);
     return p && ytKey(p) === ytKey(parsed);
   });
   if (existing) {
-    toast('Link ini sudah tersimpan');
+    toast(t('This link is already saved'));
     return selectYt(existing.id);
   }
   const title = name || (await fetchYtTitle(url, parsed));
   const item = {
     id: uid(),
-    name: title || (parsed.list ? 'Playlist YouTube' : 'Video YouTube'),
+    name: title || (parsed.list ? t('YouTube playlist') : t('YouTube video')),
     url,
     autoName: !title,
   };
   settings.ytSaved.push(item);
   persist();
-  toast(parsed.list ? 'Playlist disimpan' : 'Video disimpan');
+  toast(parsed.list ? t('Playlist saved') : t('Video saved'));
   selectYt(item.id);
 }
 
@@ -409,7 +410,7 @@ const ytSource = {
   async play({ auto = false } = {}) {
     if (!activeYt()) {
       if (!auto) {
-        toast('Simpan link YouTube terlebih dahulu');
+        toast(t('Save a YouTube link first'));
         openPanel();
       }
       return false;
@@ -427,7 +428,7 @@ const ytSource = {
 // ---------------------------------------------------------------- Kontrol utama
 
 const SOURCES = { upload: uploadSource, ambient: ambientSource, youtube: ytSource };
-const SOURCE_LABEL = { upload: 'Musikku', ambient: 'Ambient', youtube: 'YouTube' };
+const SOURCE_LABEL = { upload: t('My music'), ambient: 'Ambient', youtube: 'YouTube' };
 const source = () => SOURCES[settings.source];
 
 function setPlaying(v) {
@@ -470,8 +471,8 @@ function setSource(key) {
 // Ikuti timer: putar saat fokus, kecilkan/jeda saat istirahat, berhenti saat jeda/selesai.
 let timerKey = null;
 function timerStateKey() {
-  const t = getTimer();
-  return t ? `${t.running ? 'run' : 'pause'}:${t.plan[t.index].type === 'focus' ? 'focus' : 'break'}` : 'none';
+  const timer = getTimer();
+  return timer ? `${timer.running ? 'run' : 'pause'}:${timer.plan[timer.index].type === 'focus' ? 'focus' : 'break'}` : 'none';
 }
 
 function syncWithTimer() {
@@ -513,7 +514,7 @@ function renderStatus() {
   root.classList.toggle('is-playing', playing);
   const btn = root.querySelector('[data-m=toggle]');
   btn.innerHTML = icon(playing ? 'pause' : 'play', 18);
-  btn.setAttribute('aria-label', playing ? 'Jeda musik' : 'Putar musik');
+  btn.setAttribute('aria-label', playing ? t('Pause music') : t('Play music'));
   let now = SOURCE_LABEL[settings.source];
   if (settings.source === 'upload' && tracks[trackIndex]) now = tracks[trackIndex].name;
   if (settings.source === 'youtube' && activeYt()) now = activeYt().name;
@@ -522,7 +523,7 @@ function renderStatus() {
     now = on.length ? on.join(' + ') : 'Ambient';
   }
   root.querySelector('[data-now]').textContent = now;
-  root.querySelector('.player-fab-label').textContent = playing ? now : 'Musik';
+  root.querySelector('.player-fab-label').textContent = playing ? now : t('Music');
 }
 
 function renderTracks() {
@@ -531,13 +532,13 @@ function renderTracks() {
   list.innerHTML = tracks.length
     ? tracks
         .map(
-          (t, i) => `<li class="${i === trackIndex ? 'active' : ''}">
-            <button class="track" data-track="${i}">${icon(i === trackIndex && playing ? 'volume' : 'music', 14)}<span>${esc(t.name)}</span></button>
-            <button class="icon-btn sm" data-del-track="${t.id}" aria-label="Hapus">${icon('x', 14)}</button>
+          (track, i) => `<li class="${i === trackIndex ? 'active' : ''}">
+            <button class="track" data-track="${i}">${icon(i === trackIndex && playing ? 'volume' : 'music', 14)}<span>${esc(track.name)}</span></button>
+            <button class="icon-btn sm" data-del-track="${track.id}" aria-label="${t('Delete')}">${icon('x', 14)}</button>
           </li>`,
         )
         .join('')
-    : '<li class="muted small empty-tracks">Belum ada lagu. Upload MP3/OGG/WAV dari komputermu.</li>';
+    : `<li class="muted small empty-tracks">${t('No tracks yet. Upload MP3/OGG/WAV from your computer.')}</li>`;
 }
 
 function renderYtList() {
@@ -549,12 +550,12 @@ function renderYtList() {
           const isList = !!parseYouTube(x.url)?.list;
           return `<li class="${x.id === settings.ytActive ? 'active' : ''}">
             <button class="track" data-yt="${x.id}" title="${esc(x.url)}">${icon(isList ? 'list' : 'youtube', 14)}<span>${esc(x.name)}</span>${isList ? '<em class="tag">Playlist</em>' : ''}</button>
-            <button class="icon-btn sm" data-yt-edit="${x.id}" aria-label="Ganti nama">${icon('edit', 13)}</button>
-            <button class="icon-btn sm" data-yt-del="${x.id}" aria-label="Hapus">${icon('x', 14)}</button>
+            <button class="icon-btn sm" data-yt-edit="${x.id}" aria-label="${t('Rename')}">${icon('edit', 13)}</button>
+            <button class="icon-btn sm" data-yt-del="${x.id}" aria-label="${t('Delete')}">${icon('x', 14)}</button>
           </li>`;
         })
         .join('')
-    : '<li class="muted small empty-tracks">Belum ada link tersimpan. Tempel link video atau playlist di bawah.</li>';
+    : `<li class="muted small empty-tracks">${t('No saved links yet. Paste a video or playlist link below.')}</li>`;
 }
 
 function startRename(id) {
@@ -590,30 +591,30 @@ function renderAmbient() {
 
 async function addTracks(files) {
   const audioFiles = [...files].filter((f) => f.type.startsWith('audio/'));
-  if (!audioFiles.length) return toast('Pilih file audio', { type: 'error' });
+  if (!audioFiles.length) return toast(t('Choose audio files'), { type: 'error' });
   for (const f of audioFiles) {
     try {
       await dbPut('tracks', { id: uid(), name: f.name.replace(/\.[^.]+$/, ''), size: f.size, addedAt: Date.now(), blob: f });
     } catch {
-      toast(`Gagal menyimpan ${f.name}`, { type: 'error' });
+      toast(t('Failed to save {name}', { name: f.name }), { type: 'error' });
     }
   }
   await loadTracks();
-  toast(`${audioFiles.length} lagu ditambahkan`);
+  toast(t('{n} tracks added', { n: audioFiles.length }));
 }
 
 function buildPlayer() {
   root = document.getElementById('player');
   root.className = 'player';
   root.innerHTML = `
-    <div class="player-panel" role="dialog" aria-label="Musik">
+    <div class="player-panel" role="dialog" aria-label="${t('Music')}">
       <header class="player-head">
-        <strong>Musik belajar</strong>
-        <button class="icon-btn sm" data-m="close" aria-label="Tutup">${icon('x', 16)}</button>
+        <strong>${t('Study music')}</strong>
+        <button class="icon-btn sm" data-m="close" aria-label="${t('Close')}">${icon('x', 16)}</button>
       </header>
       <div class="tabs tabs-sm">
         <button class="tab" data-source="ambient">${icon('waves', 14)} Ambient</button>
-        <button class="tab" data-source="upload">${icon('music', 14)} Musikku</button>
+        <button class="tab" data-source="upload">${icon('music', 14)} ${t('My music')}</button>
         <button class="tab" data-source="youtube">${icon('youtube', 14)} YouTube</button>
       </div>
       <div class="player-body">
@@ -628,51 +629,51 @@ function buildPlayer() {
         <div data-pane="upload" hidden>
           <ul class="tracks" data-tracks></ul>
           <div class="row-between">
-            <label class="btn btn-sm">${icon('upload', 14)} Upload lagu<input type="file" accept="audio/*" multiple hidden data-upload /></label>
+            <label class="btn btn-sm">${icon('upload', 14)} ${t('Upload tracks')}<input type="file" accept="audio/*" multiple hidden data-upload /></label>
             <div class="row-center">
-              <button class="icon-btn sm ${settings.shuffle ? 'on' : ''}" data-m="shuffle" title="Acak" aria-label="Acak">${icon('shuffle', 15)}</button>
-              <button class="icon-btn sm" data-m="prev" aria-label="Sebelumnya">${icon('prev', 15)}</button>
-              <button class="icon-btn sm" data-m="next" aria-label="Berikutnya">${icon('skip', 15)}</button>
+              <button class="icon-btn sm ${settings.shuffle ? 'on' : ''}" data-m="shuffle" title="${t('Shuffle')}" aria-label="${t('Shuffle')}">${icon('shuffle', 15)}</button>
+              <button class="icon-btn sm" data-m="prev" aria-label="${t('Previous')}">${icon('prev', 15)}</button>
+              <button class="icon-btn sm" data-m="next" aria-label="${t('Next')}">${icon('skip', 15)}</button>
             </div>
           </div>
         </div>
         <div data-pane="youtube" hidden>
           <div class="yt-frame"><div id="yt-player"></div></div>
           <div class="row-between yt-bar">
-            <span class="muted small">Tersimpan</span>
+            <span class="muted small">${t('Saved')}</span>
             <div class="row-center">
-              <button class="icon-btn sm" data-m="prev" aria-label="Sebelumnya">${icon('prev', 15)}</button>
-              <button class="icon-btn sm" data-m="next" aria-label="Berikutnya">${icon('skip', 15)}</button>
+              <button class="icon-btn sm" data-m="prev" aria-label="${t('Previous')}">${icon('prev', 15)}</button>
+              <button class="icon-btn sm" data-m="next" aria-label="${t('Next')}">${icon('skip', 15)}</button>
             </div>
           </div>
           <ul class="tracks" data-yt-list></ul>
           <form class="yt-form">
-            <input name="url" required placeholder="Tempel link video / playlist YouTube" />
-            <input name="name" maxlength="80" placeholder="Nama (opsional)" />
-            <button class="btn btn-sm">${icon('plus', 14)} Simpan</button>
+            <input name="url" required placeholder="${t('Paste a YouTube video / playlist link')}" />
+            <input name="name" maxlength="80" placeholder="${t('Name (optional)')}" />
+            <button class="btn btn-sm">${icon('plus', 14)} ${t('Save')}</button>
           </form>
         </div>
       </div>
       <div class="player-controls">
         <button class="play-btn sm" data-m="toggle"></button>
-        <div class="now"><span class="muted small">Sedang diputar</span><span data-now></span></div>
-        <label class="vol" title="Volume">${icon('volume', 15)}<input type="range" min="0" max="1" step="0.05" value="${settings.volume}" data-volume aria-label="Volume" /></label>
+        <div class="now"><span class="muted small">${t('Now playing')}</span><span data-now></span></div>
+        <label class="vol" title="${t('Volume')}">${icon('volume', 15)}<input type="range" min="0" max="1" step="0.05" value="${settings.volume}" data-volume aria-label="Volume" /></label>
       </div>
       <div class="player-opts">
-        <label class="check"><input type="checkbox" data-auto ${settings.autoPlay ? 'checked' : ''} /> Ikuti timer pomodoro</label>
-        <label class="opt-break">Saat istirahat
+        <label class="check"><input type="checkbox" data-auto ${settings.autoPlay ? 'checked' : ''} /> ${t('Follow pomodoro timer')}</label>
+        <label class="opt-break">${t('During breaks')}
           <select class="select-sm" data-break>
-            <option value="duck" ${settings.onBreak === 'duck' ? 'selected' : ''}>Kecilkan</option>
-            <option value="pause" ${settings.onBreak === 'pause' ? 'selected' : ''}>Jeda</option>
-            <option value="keep" ${settings.onBreak === 'keep' ? 'selected' : ''}>Tetap</option>
+            <option value="duck" ${settings.onBreak === 'duck' ? 'selected' : ''}>${t('Lower')}</option>
+            <option value="pause" ${settings.onBreak === 'pause' ? 'selected' : ''}>${t('Pause')}</option>
+            <option value="keep" ${settings.onBreak === 'keep' ? 'selected' : ''}>${t('Keep')}</option>
           </select>
         </label>
       </div>
     </div>
-    <button class="player-fab" data-m="fab" aria-label="Buka pemutar musik">
+    <button class="player-fab" data-m="fab" aria-label="${t('Open music player')}">
       <span class="eq"><i></i><i></i><i></i></span>
       <span class="fab-icon">${icon('music', 16)}</span>
-      <span class="player-fab-label">Musik</span>
+      <span class="player-fab-label">${t('Music')}</span>
     </button>`;
 
   root.addEventListener('click', (e) => {

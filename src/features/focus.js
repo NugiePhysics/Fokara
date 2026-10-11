@@ -2,6 +2,7 @@
 import { load, save, on } from '../store.js';
 import { dbAll } from '../db.js';
 import { icon, esc } from '../ui.js';
+import { t } from '../i18n.js';
 import { fmtClock, fmtMin, dateKey } from '../utils/time.js';
 import {
   getTimer, currentSegment, remainingMs, segmentProgress, sessionElapsedMin, planSummary,
@@ -30,9 +31,9 @@ const panelState = () => {
 
 const toolButtons = ({ pdf = true } = {}) => `
   <div class="focus-tools">
-    <button class="icon-btn" data-act="wallpaper" aria-label="Wallpaper" title="Wallpaper">${icon('image')}</button>
-    ${pdf ? `<button class="icon-btn ${panelState() !== 'closed' ? 'on' : ''}" data-act="pdf" aria-label="Referensi PDF" title="Referensi PDF">${icon('book')}</button>` : ''}
-    <button class="icon-btn" data-act="fullscreen" aria-label="Layar penuh" title="Layar penuh (F)">${icon(isFullscreen() ? 'shrink' : 'maximize')}</button>
+    <button class="icon-btn" data-act="wallpaper" aria-label="${t('Wallpaper')}" title="${t('Wallpaper')}">${icon('image')}</button>
+    ${pdf ? `<button class="icon-btn ${panelState() !== 'closed' ? 'on' : ''}" data-act="pdf" aria-label="${t('PDF reference')}" title="${t('PDF reference')}">${icon('book')}</button>` : ''}
+    <button class="icon-btn" data-act="fullscreen" aria-label="${t('Fullscreen')}" title="${t('Fullscreen (F)')}">${icon(isFullscreen() ? 'shrink' : 'maximize')}</button>
   </div>`;
 
 export function renderFocus(el) {
@@ -52,10 +53,10 @@ export function renderFocus(el) {
   };
 
   const draw = () => {
-    const t = getTimer();
+    const timer = getTimer();
     destroyViewer();
     mainKey = '';
-    if (!t) {
+    if (!timer) {
       drawIdle();
       return syncReading();
     }
@@ -64,9 +65,9 @@ export function renderFocus(el) {
       <div class="focus-layout pdf-${state}">
         <section class="focus-main card"></section>
         <aside class="focus-panel card"></aside>
-        <div class="pdf-dock" role="group" aria-label="PDF diminimize">
-          <button class="dock-open" data-act="pdf-restore" title="Buka lagi">${icon('book', 16)}<span data-dock-label>Referensi PDF</span></button>
-          <button class="icon-btn sm" data-act="pdf-close" aria-label="Tutup PDF">${icon('x', 14)}</button>
+        <div class="pdf-dock" role="group" aria-label="${t('Minimized PDF')}">
+          <button class="dock-open" data-act="pdf-restore" title="${t('Open again')}">${icon('book', 16)}<span data-dock-label>${t('PDF reference')}</span></button>
+          <button class="icon-btn sm" data-act="pdf-close" aria-label="${t('Close PDF')}">${icon('x', 14)}</button>
         </div>
       </div>`;
     drawMain();
@@ -174,26 +175,26 @@ export function renderFocus(el) {
   const updateDock = () => {
     const label = el.querySelector('[data-dock-label]');
     if (!label) return;
-    label.textContent = viewerPdfId ? `${pdfNames[viewerPdfId] || 'PDF'} · hal. ${getLastPage(viewerPdfId)}` : 'Referensi PDF';
+    label.textContent = viewerPdfId ? `${pdfNames[viewerPdfId] || 'PDF'} · ${t('p. {n}', { n: getLastPage(viewerPdfId) })}` : t('PDF reference');
   };
 
   // ---- Timer aktif
   const drawMain = () => {
-    const t = getTimer();
+    const timer = getTimer();
     const main = el.querySelector('.focus-main');
-    if (!t || !main) return;
+    if (!timer || !main) return;
     const seg = currentSegment();
-    const key = `${t.index}-${t.running}`;
+    const key = `${timer.index}-${timer.running}`;
     if (key === mainKey) return updateLive();
     mainKey = key;
-    const sum = planSummary(t.plan);
-    const focusIdx = t.plan.slice(0, t.index + 1).filter((s) => s.type === 'focus').length;
+    const sum = planSummary(timer.plan);
+    const focusIdx = timer.plan.slice(0, timer.index + 1).filter((s) => s.type === 'focus').length;
     el.querySelector('.focus-layout').dataset.mode = seg.type === 'focus' ? 'focus' : 'break';
     main.innerHTML = `
-      <div class="focus-head" data-drag title="Seret untuk memindahkan · klik dua kali untuk kembali ke posisi awal">
+      <div class="focus-head" data-drag title="${t('Drag to move · double-click to reset position')}">
         <div class="focus-title">
-          <p class="eyebrow"><span class="drag-grip">${icon('grip', 12)}</span>${t.subject ? esc(t.subject) : 'Sesi belajar'}</p>
-          <h2>${esc(t.title)}</h2>
+          <p class="eyebrow"><span class="drag-grip">${icon('grip', 12)}</span>${timer.subject ? esc(timer.subject) : t('Study session')}</p>
+          <h2>${esc(timer.title)}</h2>
         </div>
         ${toolButtons()}
       </div>
@@ -205,38 +206,38 @@ export function renderFocus(el) {
         <div class="ring-center">
           <span class="ring-label">${SEGMENT_LABEL[seg.type]}</span>
           <span class="ring-time" data-live="time">${fmtClock(remainingMs())}</span>
-          <span class="ring-sub">${seg.type === 'focus' ? `Fokus ${focusIdx} dari ${sum.focusCount}` : `Berikutnya: fokus ${focusIdx + 1}`}</span>
+          <span class="ring-sub">${seg.type === 'focus' ? t('Focus {n} of {total}', { n: focusIdx, total: sum.focusCount }) : t('Next: focus {n}', { n: focusIdx + 1 })}</span>
         </div>
       </div>
       <div class="controls">
-        <button class="icon-btn lg" data-act="reset" title="Ulang segmen" aria-label="Ulang segmen">${icon('reset', 20)}</button>
-        <button class="play-btn" data-act="toggle" aria-label="${t.running ? 'Jeda' : 'Lanjut'}">${icon(t.running ? 'pause' : 'play', 28)}</button>
-        <button class="icon-btn lg" data-act="skip" title="Lewati (N)" aria-label="Lewati segmen">${icon('skip', 20)}</button>
+        <button class="icon-btn lg" data-act="reset" title="${t('Restart segment')}" aria-label="${t('Restart segment')}">${icon('reset', 20)}</button>
+        <button class="play-btn" data-act="toggle" aria-label="${timer.running ? t('Pause') : t('Resume')}">${icon(timer.running ? 'pause' : 'play', 28)}</button>
+        <button class="icon-btn lg" data-act="skip" title="${t('Skip (N)')}" aria-label="${t('Skip segment')}">${icon('skip', 20)}</button>
       </div>
       <div class="timeline">
-        <div data-live="bar">${segmentBar(t.plan, t.index, segmentProgress())}</div>
+        <div data-live="bar">${segmentBar(timer.plan, timer.index, segmentProgress())}</div>
         <div class="timeline-meta">
           <span data-live="elapsed">${fmtMin(sessionElapsedMin())} / ${fmtMin(sum.totalMin)}</span>
-          <span>Segmen ${t.index + 1} dari ${t.plan.length}</span>
+          <span>${t('Segment {n} of {total}', { n: timer.index + 1, total: timer.plan.length })}</span>
         </div>
       </div>
       <div class="focus-foot">
-        <span class="muted small"><kbd>Space</kbd> jeda · <kbd>N</kbd> lewati</span>
-        <button class="btn btn-ghost btn-sm" data-act="stop">${icon('stop', 14)} Hentikan sesi</button>
+        <span class="muted small"><kbd>Space</kbd> ${t('pause')} · <kbd>N</kbd> ${t('skip')}</span>
+        <button class="btn btn-ghost btn-sm" data-act="stop">${icon('stop', 14)} ${t('Stop session')}</button>
       </div>`;
     updateLive();
   };
 
   const updateLive = () => {
-    const t = getTimer();
-    if (!t) return;
+    const timer = getTimer();
+    if (!timer) return;
     const time = el.querySelector('[data-live=time]');
     if (!time) return;
     time.textContent = fmtClock(remainingMs());
     el.querySelector('.ring-fill').style.strokeDashoffset = String(CIRC * segmentProgress());
     const fill = el.querySelector('.seg.current > i');
     if (fill) fill.style.width = `${(segmentProgress() * 100).toFixed(2)}%`;
-    el.querySelector('[data-live=elapsed]').textContent = `${fmtMin(sessionElapsedMin())} / ${fmtMin(planSummary(t.plan).totalMin)}`;
+    el.querySelector('[data-live=elapsed]').textContent = `${fmtMin(sessionElapsedMin())} / ${fmtMin(planSummary(timer.plan).totalMin)}`;
   };
 
   // ---- Panel PDF
@@ -244,16 +245,16 @@ export function renderFocus(el) {
     const panel = el.querySelector('.focus-panel');
     if (!panel || panelDrawn) return;
     panelDrawn = true;
-    const t = getTimer();
+    const timer = getTimer();
     const all = (await dbAll('pdfs')).sort((a, b) => b.addedAt - a.addedAt);
     if (!el.contains(panel)) return;
     pdfNames = Object.fromEntries(all.map((p) => [p.id, p.name]));
     const panelActions = `
       <div class="panel-actions">
-        <button class="icon-btn sm" data-act="pdf-min" aria-label="Minimize PDF" title="Minimize">${icon('minus', 16)}</button>
-        <button class="icon-btn sm" data-act="pdf-close" aria-label="Tutup PDF" title="Tutup">${icon('x', 16)}</button>
+        <button class="icon-btn sm" data-act="pdf-min" aria-label="${t('Minimize PDF')}" title="${t('Minimize')}">${icon('minus', 16)}</button>
+        <button class="icon-btn sm" data-act="pdf-close" aria-label="${t('Close PDF')}" title="${t('Close')}">${icon('x', 16)}</button>
       </div>`;
-    const linkedIds = (t?.scheduleId && getSchedule(t.scheduleId)?.pdfIds) || [];
+    const linkedIds = (timer?.scheduleId && getSchedule(timer.scheduleId)?.pdfIds) || [];
     const linked = all.filter((p) => linkedIds.includes(p.id));
     const saved = load('focusPdf', null);
     let current = linked[0]?.id;
@@ -261,10 +262,10 @@ export function renderFocus(el) {
     current ||= all[0]?.id;
 
     if (!all.length) {
-      panel.innerHTML = `<div class="panel-head"><span class="muted small">Referensi PDF</span>${panelActions}</div><div class="empty">
+      panel.innerHTML = `<div class="panel-head"><span class="muted small">${t('PDF reference')}</span>${panelActions}</div><div class="empty">
         <div class="empty-icon">${icon('book', 28)}</div>
-        <p>Belum ada referensi PDF.</p>
-        <a class="btn" href="#/library">${icon('upload', 16)} Upload PDF</a></div>`;
+        <p>${t('No PDF references yet.')}</p>
+        <a class="btn" href="#/library">${icon('upload', 16)} ${t('Upload PDF')}</a></div>`;
       return;
     }
     const tabs = linked.length ? linked : [];
@@ -273,8 +274,8 @@ export function renderFocus(el) {
         <div class="pdf-tabs">
           ${tabs.map((p) => `<button class="pdf-tab ${p.id === current ? 'active' : ''}" data-pdf="${p.id}" title="${esc(p.name)}">${icon('file', 13)}<span>${esc(p.name)}</span></button>`).join('')}
         </div>
-        <select class="select-sm" data-pdf-select aria-label="Pilih PDF">
-          <option value="">${tabs.length ? 'PDF lain…' : 'Pilih PDF…'}</option>
+        <select class="select-sm" data-pdf-select aria-label="${t('Choose PDF')}">
+          <option value="">${tabs.length ? t('Other PDF…') : t('Choose PDF…')}</option>
           ${all.map((p) => `<option value="${p.id}" ${!tabs.length && p.id === current ? 'selected' : ''}>${esc(p.name)}</option>`).join('')}
         </select>
         ${panelActions}
@@ -302,32 +303,32 @@ export function renderFocus(el) {
         done
           ? `<section class="card done-card">
               <div class="done-emoji">🎉</div>
-              <h2>Sesi selesai!</h2>
-              <p class="muted">${esc(done.title)} · ${fmtMin(done.focusDoneMin)} fokus dalam ${done.plan.filter((s) => s.type === 'focus').length} sesi pomodoro.</p>
-              <div class="row-center"><a class="btn" href="#/tracking">Lihat tracking</a><button class="btn btn-ghost" data-dismiss>Tutup</button></div>
+              <h2>${t('Session complete!')}</h2>
+              <p class="muted">${t('{title} · {time} of focus across {n} pomodoro sessions.', { title: esc(done.title), time: fmtMin(done.focusDoneMin), n: done.plan.filter((s) => s.type === 'focus').length })}</p>
+              <div class="row-center"><a class="btn" href="#/tracking">${t('View tracking →')}</a><button class="btn btn-ghost" data-dismiss>${t('Close')}</button></div>
             </section>`
           : ''
       }
       <header class="page-head">
-        <div><h1>Focus</h1><p class="muted">Pilih jadwal atau mulai sesi cepat.</p></div>
+        <div><h1>${t('Focus')}</h1><p class="muted">${t('Pick a schedule or start a quick session.')}</p></div>
         ${toolButtons({ pdf: false })}
       </header>
       <div class="grid-2">
         <section class="card">
-          <div class="card-head"><h3>Jadwal hari ini</h3><a href="#/schedule" class="muted small">Semua jadwal</a></div>
-          <div class="sched-list compact">${today.length ? today.map(scheduleItem).join('') : '<p class="muted small">Tidak ada jadwal tersisa hari ini.</p>'}</div>
+          <div class="card-head"><h3>${t("Today's schedule")}</h3><a href="#/schedule" class="muted small">${t('All schedules')}</a></div>
+          <div class="sched-list compact">${today.length ? today.map(scheduleItem).join('') : `<p class="muted small">${t('No schedules left for today.')}</p>`}</div>
         </section>
         <section class="card">
-          <div class="card-head"><h3>Sesi cepat</h3></div>
+          <div class="card-head"><h3>${t('Quick session')}</h3></div>
           <form class="form quick-form">
-            <label class="field"><span>Judul (opsional)</span><input name="title" maxlength="80" placeholder="Belajar" /></label>
-            <div class="field"><span>Durasi</span>
+            <label class="field"><span>${t('Title (optional)')}</span><input name="title" maxlength="80" placeholder="${t('Study')}" /></label>
+            <div class="field"><span>${t('Duration')}</span>
               <div data-duration></div>
             </div>
-            <div class="field"><span>Preset</span>
+            <div class="field"><span>${t('Preset')}</span>
               <div class="segmented">${Object.entries(PRESETS).map(([k, p], i) => `<label><input type="radio" name="preset" value="${k}" ${i === 0 ? 'checked' : ''}/><span>${p.label}</span></label>`).join('')}</div>
             </div>
-            <button class="btn btn-primary">${icon('play', 14)} Mulai sekarang</button>
+            <button class="btn btn-primary">${icon('play', 14)} ${t('Start now')}</button>
           </form>
         </section>
       </div>`;
@@ -365,7 +366,7 @@ export function renderFocus(el) {
     const preset = makePreset(f.preset.value);
     const minutes = quickDuration?.value ?? 60;
     save('quickDuration', minutes);
-    startSession({ title: f.title.value.trim() || 'Sesi cepat', plan: buildPlan(minutes, preset) });
+    startSession({ title: f.title.value.trim() || t('Quick session'), plan: buildPlan(minutes, preset) });
   };
 
   el.addEventListener('click', onClick);
@@ -379,7 +380,7 @@ export function renderFocus(el) {
   window.addEventListener('resize', onResize);
   cleanups.push(bindScheduleActions(el));
   cleanups.push(
-    on('timer', (t) => (t && el.querySelector('.focus-main') ? drawMain() : draw())),
+    on('timer', (timer) => (timer && el.querySelector('.focus-main') ? drawMain() : draw())),
     on('timer:tick', updateLive),
     on('fullscreen', (full) => {
       const btn = el.querySelector('[data-act=fullscreen]');

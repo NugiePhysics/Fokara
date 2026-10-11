@@ -3,12 +3,13 @@ import { uid, on, emit, load, save } from '../store.js';
 import { dbAll, dbPut, dbDelete } from '../db.js';
 import { icon, esc, toast, confirmDialog } from '../ui.js';
 import { fmtBytes } from '../utils/time.js';
+import { t } from '../i18n.js';
 import { createPdfViewer, getLastPage, getThumbnail, forgetThumbnail } from './pdfViewer.js';
 import { getSchedules } from './schedule.js';
 
 export async function addPdfFiles(files) {
   const pdfs = [...files].filter((f) => f.type === 'application/pdf' || f.name.toLowerCase().endsWith('.pdf'));
-  if (!pdfs.length) return toast('Hanya file PDF yang didukung', { type: 'error' });
+  if (!pdfs.length) return toast(t('Only PDF files are supported'), { type: 'error' });
   navigator.storage?.persist?.().catch(() => {});
   let added = 0;
   for (const file of pdfs) {
@@ -17,11 +18,11 @@ export async function addPdfFiles(files) {
       added++;
     } catch (err) {
       console.error(err);
-      toast(`Gagal menyimpan ${file.name} (penyimpanan penuh?)`, { type: 'error' });
+      toast(t('Failed to save {name} (storage full?)', { name: file.name }), { type: 'error' });
     }
   }
   if (added) {
-    toast(`${added} PDF ditambahkan`);
+    toast(t('{n} PDF added', { n: added }));
     emit('pdfs:changed');
   }
 }
@@ -75,13 +76,13 @@ export function renderLibrary(el, [openId] = []) {
     const usage = await navigator.storage?.estimate?.().catch(() => null);
     el.innerHTML = `
       <header class="page-head">
-        <div><h1>Library</h1><p class="muted">Referensi PDF tersimpan di browser ini dan bisa dibuka saat fokus.</p></div>
+        <div><h1>${t('Library')}</h1><p class="muted">${t('PDF references are stored in this browser and can be opened while you focus.')}</p></div>
       </header>
       <label class="dropzone" tabindex="0">
         <input type="file" accept="application/pdf,.pdf" multiple hidden />
         <div class="empty-icon">${icon('upload', 24)}</div>
-        <strong>Seret PDF ke sini</strong>
-        <span class="muted small">atau klik untuk memilih file</span>
+        <strong>${t('Drop PDFs here')}</strong>
+        <span class="muted small">${t('or click to choose files')}</span>
       </label>
       ${
         pdfs.length
@@ -95,16 +96,16 @@ export function renderLibrary(el, [openId] = []) {
                 </div>
                 <div class="pdf-info">
                   <h4 title="${esc(p.name)}">${esc(p.name)}</h4>
-                  <span class="muted small">${fmtBytes(p.size)} · hal. ${getLastPage(p.id)}</span>
+                  <span class="muted small">${fmtBytes(p.size)} · ${t('p. {n}', { n: getLastPage(p.id) })}</span>
                 </div>
               </a>
-              <button class="icon-btn pdf-del" data-del="${p.id}" aria-label="Hapus ${esc(p.name)}">${icon('trash', 16)}</button>
+              <button class="icon-btn pdf-del" data-del="${p.id}" aria-label="${t('Delete {name}', { name: esc(p.name) })}">${icon('trash', 16)}</button>
             </article>`,
               )
               .join('')}</div>`
-          : '<p class="muted center small">Belum ada PDF yang diupload.</p>'
+          : `<p class="muted center small">${t('No PDFs uploaded yet.')}</p>`
       }
-      ${usage?.quota ? `<p class="muted small center">Penyimpanan terpakai ${fmtBytes(usage.usage)} dari ${fmtBytes(usage.quota)}</p>` : ''}`;
+      ${usage?.quota ? `<p class="muted small center">${t('Storage used: {used} of {quota}', { used: fmtBytes(usage.usage), quota: fmtBytes(usage.quota) })}</p>` : ''}`;
     fillThumbs(id);
   };
 
@@ -115,9 +116,9 @@ export function renderLibrary(el, [openId] = []) {
     const del = e.target.closest('[data-del]');
     if (!del) return;
     e.preventDefault();
-    if (await confirmDialog('Hapus PDF ini dari library?', { okText: 'Hapus', danger: true })) {
+    if (await confirmDialog(t('Delete this PDF from the library?'), { okText: t('Delete'), danger: true })) {
       await removePdf(del.dataset.del);
-      toast('PDF dihapus');
+      toast(t('PDF deleted'));
     }
   };
   const onDrag = (e) => {
@@ -154,7 +155,7 @@ function renderReader(el, id) {
   el.innerHTML = `
     <div class="reader">
       <header class="reader-head">
-        <a href="#/library" class="btn btn-ghost btn-sm">${icon('chevL', 16)} Library</a>
+        <a href="#/library" class="btn btn-ghost btn-sm">${icon('chevL', 16)} ${t('Library')}</a>
         <h2 class="reader-title">…</h2>
       </header>
       <div class="reader-body card"></div>
@@ -162,7 +163,7 @@ function renderReader(el, id) {
   dbAll('pdfs').then((all) => {
     const p = all.find((x) => x.id === id);
     const title = el.querySelector('.reader-title');
-    if (title) title.textContent = p ? p.name : 'PDF tidak ditemukan';
+    if (title) title.textContent = p ? p.name : t('PDF not found');
   });
   const viewer = createPdfViewer(el.querySelector('.reader-body'), id);
   return () => viewer.destroy();

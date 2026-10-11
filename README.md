@@ -1,31 +1,35 @@
 # Fokara
 
-Fokara adalah study planner minimalis: jadwal belajar dengan pomodoro otomatis, tracking harian, musik belajar, dan library referensi PDF. Semua data tersimpan di browser (localStorage + IndexedDB), tanpa backend.
+Fokara is a minimalist study planner: schedules with automatic pomodoro, daily tracking, study music, and a PDF reference library. All data stays in the browser (localStorage + IndexedDB) — no backend.
 
-## Menjalankan
+The interface is in English by default; switch to Bahasa Indonesia with the **EN/ID** button in the sidebar.
+
+## Getting started
 
 ```bash
 npm install
 npm run dev      # http://localhost:5173
-npm run build    # hasil di dist/
+npm run build    # output in dist/
 ```
 
-Tambahkan `?speed=60` di URL untuk mempercepat timer saat testing (1 menit = 1 detik).
+Add `?speed=60` to the URL to speed up the timer while testing (1 minute = 1 second).
 
-## Fitur
+## Features
 
-- **Jadwal**: tentukan durasi (mis. 3 jam) dan preset (25/5, 50/10, atau custom). Pembagian sesi fokus/istirahat dihitung otomatis dan langsung dipakai timer saat jadwal dimulai.
-- **Focus**: ring timer, timeline segmen, panel PDF opsional (bisa diminimize), wallpaper/live wallpaper (preset atau upload gambar/GIF/video), dan layar penuh. Shortcut: `Space` jeda, `N` lewati, `M` musik, `F` layar penuh, `[` sidebar. Saat PDF dibuka, Focus masuk mode baca: sidebar disembunyikan sementara, PDF melebar ±3/4 layar, dan timer jadi ringkas. Timer bisa digeser ke mana saja (klik dua kali judulnya untuk reset posisi).
-- **Tracking**: menit fokus per hari, streak, grafik 7 hari, heatmap, dan rincian per mata pelajaran.
-- **Musik**: suara ambient (hujan, ombak, noise), upload MP3 sendiri, atau YouTube. Bisa otomatis diputar saat fokus dan dikecilkan/dijeda saat istirahat.
-- **Library**: upload PDF lewat drag & drop dan baca langsung di website (halaman terakhir diingat).
+- **Schedule**: set a duration (e.g. 3 hours) and a preset (25/5, 50/10, or custom). The focus/break split is calculated automatically and used by the timer as soon as the schedule starts.
+- **Focus**: ring timer, segment timeline, optional PDF panel (can be minimized), wallpapers/live wallpapers (presets or your own image/GIF/video), and fullscreen. Opening a PDF switches to reading mode: the sidebar hides temporarily, the PDF takes about 3/4 of the screen, and the timer becomes compact. The timer can be dragged anywhere (double-click its title to reset). Shortcuts: `Space` pause, `N` skip, `M` music, `F` fullscreen, `[` sidebar.
+- **Tracking**: focus minutes per day (logged live, so stopping early still counts), streak, 7-day chart, heatmap, per-subject totals, and a daily goal.
+- **Music**: ambient sounds (rain, waves, noise), your own MP3 uploads, or saved YouTube videos/playlists. Can play automatically during focus and lower/pause during breaks.
+- **Library**: drag & drop PDFs with cover thumbnails and a continuous-scroll reader (remembers the last page).
 
-## Struktur
+## Structure
 
 ```
 src/
-  main.js            router & shortcut
+  main.js            router, shortcuts, theme, language toggle
+  i18n.js            translations (English default, Bahasa Indonesia)
   store.js, db.js    localStorage + event bus, IndexedDB
-  features/          pomodoro, schedule, focus, tracking, today, music, library, pdfViewer, wallpaper
+  features/          pomodoro, schedule, focus, tracking, today, music, library, pdfViewer, wallpaper, timePicker
+  utils/             time, sound, fullscreen, sidebar
   styles/            base, layout, components
 ```

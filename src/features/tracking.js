@@ -1,9 +1,13 @@
 // Tracking harian: menit fokus, streak, grafik 7 hari, heatmap, per mata pelajaran.
 import { load, save, on, getSettings, updateSettings } from '../store.js';
 import { icon, esc } from '../ui.js';
+import { t, locale } from '../i18n.js';
 import { dateKey, addDays, parseKey, fmtMin, fmtDate } from '../utils/time.js';
 import { schedulesOn, updateSchedule } from './schedule.js';
 import { createDurationPicker } from './timePicker.js';
+
+const OTHER = '__other';
+const subjectName = (s) => (s === OTHER || s === 'Lainnya' ? t('Other') : s);
 
 export const getTracking = () => load('tracking', {});
 const emptyDay = () => ({ focusMin: 0, sessions: 0, bySubject: {} });
@@ -19,7 +23,7 @@ export function initTracking() {
     const day = (all[key] = { ...emptyDay(), ...all[key] });
     day.focusMin += min;
     if (completed) day.sessions += 1;
-    const name = subject || 'Lainnya';
+    const name = subject || OTHER; // kunci netral bahasa, ditampilkan sebagai t('Other')
     day.bySubject[name] = (day.bySubject[name] || 0) + min;
     save('tracking', all);
   });
@@ -58,7 +62,7 @@ export function goalRing(value, goal, size = 120) {
   const r = size / 2 - 8;
   const c = 2 * Math.PI * r;
   const pct = Math.min(1, goal ? value / goal : 0);
-  return `<svg class="goal-ring" width="${size}" height="${size}" viewBox="0 0 ${size} ${size}" role="img" aria-label="${Math.round(pct * 100)}% dari target">
+  return `<svg class="goal-ring" width="${size}" height="${size}" viewBox="0 0 ${size} ${size}" role="img" aria-label="${t('{pct}% of goal', { pct: Math.round(pct * 100) })}">
     <circle cx="${size / 2}" cy="${size / 2}" r="${r}" class="ring-track" stroke-width="8" fill="none"/>
     <circle cx="${size / 2}" cy="${size / 2}" r="${r}" class="ring-fill" stroke-width="8" fill="none"
       stroke-dasharray="${c}" stroke-dashoffset="${c * (1 - pct)}" transform="rotate(-90 ${size / 2} ${size / 2})" stroke-linecap="round"/>
@@ -83,7 +87,7 @@ function weekChart(all, goal) {
       const x = pad.l + i * bw + bw * 0.22;
       const w = bw * 0.56;
       const h = Math.max(v > 0 ? 3 : 0, H - pad.b - y(v));
-      const label = parseKey(k).toLocaleDateString('id-ID', { weekday: 'short' });
+      const label = parseKey(k).toLocaleDateString(locale(), { weekday: 'short' });
       return `<g class="${k === today ? 'is-today' : ''}">
         <title>${fmtDate(k)}: ${fmtMin(v)}</title>
         <rect class="bar-bg" x="${x}" y="${pad.t}" width="${w}" height="${H - pad.t - pad.b}" rx="6"/>
@@ -94,10 +98,10 @@ function weekChart(all, goal) {
     })
     .join('');
   const gy = y(goal);
-  return `<svg class="chart" viewBox="0 0 ${W} ${H}" role="img" aria-label="Menit fokus 7 hari terakhir">
+  return `<svg class="chart" viewBox="0 0 ${W} ${H}" role="img" aria-label="${t('Focus minutes in the last 7 days')}">
     ${bars}
     <line class="goal-line" x1="${pad.l}" x2="${W - pad.r}" y1="${gy}" y2="${gy}"/>
-    <text class="goal-text" x="${W - pad.r}" y="${gy - 5}" text-anchor="end">target ${fmtMin(goal)}</text>
+    <text class="goal-text" x="${W - pad.r}" y="${gy - 5}" text-anchor="end">${t('goal {time}', { time: fmtMin(goal) })}</text>
   </svg>`;
 }
 
@@ -123,17 +127,17 @@ function heatmap(all, goal) {
     cols.push(`<div class="hm-col">${cells.join('')}</div>`);
   }
   return `<div class="heatmap">${cols.join('')}</div>
-    <div class="hm-legend muted small">Sedikit ${[0, 1, 2, 3, 4].map((l) => `<span class="hm-cell hm-${l}"></span>`).join('')} Target</div>`;
+    <div class="hm-legend muted small">${t('Less')} ${[0, 1, 2, 3, 4].map((l) => `<span class="hm-cell hm-${l}"></span>`).join('')} ${t('Goal')}</div>`;
 }
 
 function subjectBreakdown(all) {
   const totals = {};
   for (let i = 0; i < 7; i++) {
     const day = all[dateKey(addDays(new Date(), -i))];
-    for (const [s, m] of Object.entries(day?.bySubject || {})) totals[s] = (totals[s] || 0) + m;
+    for (const [s, m] of Object.entries(day?.bySubject || {})) totals[subjectName(s)] = (totals[subjectName(s)] || 0) + m;
   }
   const entries = Object.entries(totals).sort((a, b) => b[1] - a[1]);
-  if (!entries.length) return '<p class="muted small">Belum ada data minggu ini.</p>';
+  if (!entries.length) return `<p class="muted small">${t('No data this week yet.')}</p>`;
   const max = entries[0][1];
   return `<div class="hbars">${entries
     .map(
@@ -158,8 +162,8 @@ function goalPanel(all, goal, todayMin) {
       <div class="goal-panel-body">
         <div class="goal-panel-head">
           <div>
-            <p class="eyebrow">Target harian</p>
-            <p class="goal-status">${left <= 0 ? '🎉 Target hari ini tercapai!' : `Sisa <strong>${fmtMin(left)}</strong> lagi untuk hari ini`}</p>
+            <p class="eyebrow">${t('Daily goal')}</p>
+            <p class="goal-status">${left <= 0 ? t('🎉 Goal reached for today!') : t('<strong>{time}</strong> left for today', { time: fmtMin(left) })}</p>
           </div>
         </div>
         <div data-goal-picker></div>
@@ -169,13 +173,13 @@ function goalPanel(all, goal, todayMin) {
               .map((k) => {
                 const v = all[k]?.focusMin || 0;
                 const ratio = Math.min(1, v / goal);
-                const label = parseKey(k).toLocaleDateString('id-ID', { weekday: 'short' });
+                const label = parseKey(k).toLocaleDateString(locale(), { weekday: 'short' });
                 return `<div class="wd ${ratio >= 1 ? 'hit' : ''} ${k === dateKey() ? 'today' : ''}" title="${fmtDate(k)}: ${fmtMin(v)}">
                   <span class="wd-dot" style="--p:${ratio}">${ratio >= 1 ? icon('check', 12) : ''}</span><span>${label}</span></div>`;
               })
               .join('')}
           </div>
-          <span class="muted small">Tercapai <strong>${hits}</strong> dari 7 hari terakhir</span>
+          <span class="muted small">${t('Reached on <strong>{n}</strong> of the last 7 days', { n: hits })}</span>
         </div>
       </div>
     </section>`;
@@ -199,22 +203,22 @@ export function renderTracking(el) {
 
     el.innerHTML = `
       <header class="page-head">
-        <div><h1>Tracking</h1><p class="muted">Konsistensi kecil setiap hari lebih penting daripada maraton.</p></div>
+        <div><h1>${t('Tracking')}</h1><p class="muted">${t('Small daily consistency beats a marathon.')}</p></div>
       </header>
       <div class="stats">
-        <div class="stat"><span class="stat-label">${icon('target', 14)} Hari ini</span><strong>${fmtMin(today.focusMin)}</strong><span class="muted small">dari ${fmtMin(goal)}</span></div>
-        <div class="stat"><span class="stat-label">${icon('chart', 14)} 7 hari</span><strong>${fmtMin(weekTotal)}</strong><span class="muted small">rata-rata ${fmtMin(weekTotal / 7)}/hari</span></div>
-        <div class="stat"><span class="stat-label">${icon('flame', 14)} Streak</span><strong>${currentStreak()} hari</strong><span class="muted small">terpanjang ${longestStreak()} hari</span></div>
-        <div class="stat"><span class="stat-label">${icon('timer', 14)} Pomodoro</span><strong>${weekSessions}</strong><span class="muted small">sesi selesai minggu ini</span></div>
+        <div class="stat"><span class="stat-label">${icon('target', 14)} ${t('Today')}</span><strong>${fmtMin(today.focusMin)}</strong><span class="muted small">${t('of {goal}', { goal: fmtMin(goal) })}</span></div>
+        <div class="stat"><span class="stat-label">${icon('chart', 14)} ${t('7 days')}</span><strong>${fmtMin(weekTotal)}</strong><span class="muted small">${t('avg {time}/day', { time: fmtMin(weekTotal / 7) })}</span></div>
+        <div class="stat"><span class="stat-label">${icon('flame', 14)} ${t('Streak')}</span><strong>${t('{n} days', { n: currentStreak() })}</strong><span class="muted small">${t('longest {n} days', { n: longestStreak() })}</span></div>
+        <div class="stat"><span class="stat-label">${icon('timer', 14)} ${t('Pomodoro')}</span><strong>${weekSessions}</strong><span class="muted small">${t('sessions completed this week')}</span></div>
       </div>
       <div class="grid-2">
         ${goalPanel(all, goal, today.focusMin)}
         <section class="card span-2">
-          <div class="card-head"><h3>7 hari terakhir</h3></div>
+          <div class="card-head"><h3>${t('Last 7 days')}</h3></div>
           ${weekChart(all, goal)}
         </section>
         <section class="card">
-          <div class="card-head"><h3>Checklist hari ini</h3></div>
+          <div class="card-head"><h3>${t("Today's checklist")}</h3></div>
           ${
             todays.length
               ? `<ul class="checklist">${todays
@@ -224,15 +228,15 @@ export function renderTracking(el) {
                       <span class="${s.status === 'done' ? 'strike' : ''}">${esc(s.startTime)} · ${esc(s.title)}</span></label></li>`,
                   )
                   .join('')}</ul>`
-              : '<p class="muted small">Tidak ada jadwal hari ini. <a href="#/schedule">Buat jadwal</a></p>'
+              : `<p class="muted small">${t('No schedules today. <a href="#/schedule">Create one</a>')}</p>`
           }
         </section>
         <section class="card">
-          <div class="card-head"><h3>Per mata pelajaran</h3><span class="muted small">7 hari</span></div>
+          <div class="card-head"><h3>${t('By subject')}</h3><span class="muted small">${t('7 days')}</span></div>
           ${subjectBreakdown(all)}
         </section>
         <section class="card span-2">
-          <div class="card-head"><h3>Aktivitas</h3><span class="muted small">18 minggu terakhir</span></div>
+          <div class="card-head"><h3>${t('Activity')}</h3><span class="muted small">${t('Last 18 weeks')}</span></div>
           ${heatmap(all, goal)}
         </section>
       </div>`;

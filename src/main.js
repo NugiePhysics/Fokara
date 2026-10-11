@@ -4,6 +4,7 @@ import './styles/components.css';
 
 import { updateSettings, on, emit } from './store.js';
 import { icon, isTyping } from './ui.js';
+import { t, lang, setLang } from './i18n.js';
 import { initTimer, getTimer, toggle, skip } from './features/pomodoro.js';
 import { initSchedule, renderSchedule } from './features/schedule.js';
 import { initTracking, renderTracking } from './features/tracking.js';
@@ -16,11 +17,11 @@ import { setSidebarHidden, toggleSidebar } from './utils/sidebar.js';
 import { initFullscreen, toggleFullscreen, isFullscreen, exitFullscreen } from './utils/fullscreen.js';
 
 const ROUTES = {
-  today: { label: 'Hari ini', icon: 'home', render: renderToday },
-  schedule: { label: 'Jadwal', icon: 'calendar', render: renderSchedule },
-  focus: { label: 'Focus', icon: 'timer', render: renderFocus },
-  tracking: { label: 'Tracking', icon: 'chart', render: renderTracking },
-  library: { label: 'Library', icon: 'book', render: renderLibrary },
+  today: { label: t('Today'), icon: 'home', render: renderToday },
+  schedule: { label: t('Schedule'), icon: 'calendar', render: renderSchedule },
+  focus: { label: t('Focus'), icon: 'timer', render: renderFocus },
+  tracking: { label: t('Tracking'), icon: 'chart', render: renderTracking },
+  library: { label: t('Library'), icon: 'book', render: renderLibrary },
 };
 
 const nav = document.getElementById('nav');
@@ -50,7 +51,8 @@ const themeBtn = document.getElementById('theme-toggle');
 function paintThemeButton() {
   const dark = document.documentElement.dataset.theme === 'dark';
   themeBtn.innerHTML = icon(dark ? 'sun' : 'moon');
-  themeBtn.title = dark ? 'Mode terang' : 'Mode gelap';
+  themeBtn.title = dark ? t('Light mode') : t('Dark mode');
+  themeBtn.setAttribute('aria-label', t('Toggle theme'));
 }
 themeBtn.addEventListener('click', () => {
   const next = document.documentElement.dataset.theme === 'dark' ? 'light' : 'dark';
@@ -65,6 +67,18 @@ const hideBtn = document.getElementById('sidebar-hide');
 const showBtn = document.getElementById('sidebar-show');
 hideBtn.innerHTML = icon('sidebar');
 showBtn.innerHTML = icon('menu');
+hideBtn.title = `${t('Hide sidebar')} ( [ )`;
+hideBtn.setAttribute('aria-label', t('Hide sidebar'));
+showBtn.title = `${t('Show sidebar')} ( [ )`;
+showBtn.setAttribute('aria-label', t('Show sidebar'));
+
+// Bahasa: English (default) ↔ Bahasa Indonesia
+document.documentElement.lang = lang();
+const langBtn = document.getElementById('lang-toggle');
+langBtn.textContent = lang().toUpperCase();
+langBtn.title = lang() === 'en' ? 'Ganti ke Bahasa Indonesia' : 'Switch to English';
+langBtn.setAttribute('aria-label', langBtn.title);
+langBtn.addEventListener('click', () => setLang(lang() === 'en' ? 'id' : 'en'));
 hideBtn.addEventListener('click', () => setSidebarHidden(true));
 showBtn.addEventListener('click', () => setSidebarHidden(false));
 

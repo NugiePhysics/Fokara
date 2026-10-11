@@ -3,12 +3,13 @@ import { load, save, on, uid } from '../store.js';
 import { dbAll, dbGet, dbPut, dbDelete } from '../db.js';
 import { icon, esc, openModal, toast } from '../ui.js';
 import { fmtBytes } from '../utils/time.js';
+import { t } from '../i18n.js';
 
 const PRESETS = {
-  aurora: 'Aurora',
-  rain: 'Hujan malam',
-  stars: 'Bintang',
-  dusk: 'Senja',
+  aurora: t('Aurora'),
+  rain: t('Night rain'),
+  stars: t('Stars'),
+  dusk: t('Dusk'),
 };
 const DEFAULTS = { active: 'none', dim: 0.3, blur: 0 };
 const MAX_SIZE = 300 * 1024 ** 2;
@@ -240,17 +241,17 @@ export async function openWallpaperPicker() {
   };
   const wrap = document.createElement('div');
   wrap.className = 'wp-picker';
-  const modal = openModal({ title: 'Wallpaper belajar', content: wrap, wide: true, onClose: releaseUrls });
+  const modal = openModal({ title: t('Study wallpaper'), content: wrap, wide: true, onClose: releaseUrls });
 
   const draw = async () => {
     const items = (await dbAll('wallpapers')).sort((a, b) => b.addedAt - a.addedAt);
     const wp = getWallpaper();
     releaseUrls();
     wrap.innerHTML = `
-      <p class="muted small">Tampil di halaman Focus. Upload gambar, GIF, atau video (MP4/WebM) untuk live wallpaper.</p>
+      <p class="muted small">${t('Shown on the Focus page. Upload an image, GIF, or video (MP4/WebM) for a live wallpaper.')}</p>
       <div class="wp-grid">
         <button class="wp-tile ${wp.active === 'none' ? 'active' : ''}" data-wp="none">
-          <div class="wp-thumb wp-thumb-none">${icon('x', 20)}</div><span>Tanpa wallpaper</span>
+          <div class="wp-thumb wp-thumb-none">${icon('x', 20)}</div><span>${t('No wallpaper')}</span>
         </button>
         ${Object.entries(PRESETS)
           .map(
@@ -265,18 +266,18 @@ export async function openWallpaperPicker() {
                 <div class="wp-thumb" data-media="${it.id}">${it.type === 'video' ? '<em class="wp-badge">Live</em>' : ''}</div>
                 <span>${esc(it.name)}</span>
               </button>
-              <button class="icon-btn sm wp-del" data-wp-del="${it.id}" aria-label="Hapus wallpaper">${icon('trash', 14)}</button>
+              <button class="icon-btn sm wp-del" data-wp-del="${it.id}" aria-label="${t('Delete wallpaper')}">${icon('trash', 14)}</button>
             </div>`,
           )
           .join('')}
         <label class="wp-tile wp-upload">
           <input type="file" accept="image/*,video/mp4,video/webm,video/quicktime" multiple hidden data-wp-upload />
-          <div class="wp-thumb wp-thumb-none">${icon('upload', 20)}</div><span>Upload</span>
+          <div class="wp-thumb wp-thumb-none">${icon('upload', 20)}</div><span>${t('Upload')}</span>
         </label>
       </div>
       <div class="wp-sliders">
-        <label class="slider-row"><span>Gelapkan</span><input type="range" min="0" max="0.85" step="0.05" value="${wp.dim}" data-wp-dim /></label>
-        <label class="slider-row"><span>Blur</span><input type="range" min="0" max="24" step="1" value="${wp.blur}" data-wp-blur /></label>
+        <label class="slider-row"><span>${t('Dim')}</span><input type="range" min="0" max="0.85" step="0.05" value="${wp.dim}" data-wp-dim /></label>
+        <label class="slider-row"><span>${t('Blur')}</span><input type="range" min="0" max="24" step="1" value="${wp.blur}" data-wp-blur /></label>
       </div>`;
     for (const it of items) {
       const box = wrap.querySelector(`[data-media="${it.id}"]`);
@@ -292,7 +293,7 @@ export async function openWallpaperPicker() {
       const id = del.dataset.wpDel;
       await dbDelete('wallpapers', id);
       if (getWallpaper().active === id) setWallpaper({ active: 'none' });
-      toast('Wallpaper dihapus');
+      toast(t('Wallpaper deleted'));
       return draw();
     }
     const tile = e.target.closest('[data-wp]');
@@ -311,11 +312,11 @@ export async function openWallpaperPicker() {
     if (e.target.matches('[data-wp-blur]')) setWallpaper({ blur: Number(e.target.value) });
     if (e.target.matches('[data-wp-upload]')) {
       const files = [...e.target.files].filter((f) => f.type.startsWith('image/') || f.type.startsWith('video/'));
-      if (!files.length) return toast('Pilih file gambar atau video', { type: 'error' });
+      if (!files.length) return toast(t('Choose an image or video file'), { type: 'error' });
       let lastId = null;
       for (const f of files) {
         if (f.size > MAX_SIZE) {
-          toast(`${f.name} terlalu besar (maks ${fmtBytes(MAX_SIZE)})`, { type: 'error' });
+          toast(t('{name} is too large (max {max})', { name: f.name, max: fmtBytes(MAX_SIZE) }), { type: 'error' });
           continue;
         }
         try {
@@ -330,12 +331,12 @@ export async function openWallpaperPicker() {
           });
         } catch {
           lastId = null;
-          toast(`Gagal menyimpan ${f.name}`, { type: 'error' });
+          toast(t('Failed to save {name}', { name: f.name }), { type: 'error' });
         }
       }
       if (lastId) {
         setWallpaper({ active: lastId });
-        toast('Wallpaper ditambahkan');
+        toast(t('Wallpaper added'));
       }
       draw();
     }

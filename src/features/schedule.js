@@ -2,6 +2,7 @@
 import { load, save, on, uid } from '../store.js';
 import { dbAll } from '../db.js';
 import { icon, esc, openModal, confirmDialog, toast } from '../ui.js';
+import { t } from '../i18n.js';
 import { dateKey, relDayLabel, fmtMin, addMinutesToTime, pad } from '../utils/time.js';
 import { createDurationPicker, createStepper } from './timePicker.js';
 import { buildPlan, planSummary, segmentBar, makePreset, presetLabel, PRESETS, getTimer, startSession } from './pomodoro.js';
@@ -49,8 +50,8 @@ export async function startSchedule(id) {
     location.hash = '#/focus';
     return;
   }
-  if (timer && !(await confirmDialog(`Sesi "${timer.title}" masih berjalan. Hentikan dan mulai "${s.title}"?`, { okText: 'Mulai' }))) return;
-  if (s.status === 'done' && !(await confirmDialog(`"${s.title}" sudah selesai. Ulangi sesi ini?`, { okText: 'Ulangi' }))) return;
+  if (timer && !(await confirmDialog(t('Session "{title}" is still running. Stop it and start "{next}"?', { title: timer.title, next: s.title }), { okText: t('Start') }))) return;
+  if (s.status === 'done' && !(await confirmDialog(t('"{title}" is already done. Repeat this session?', { title: s.title }), { okText: t('Repeat') }))) return;
   startSession({ scheduleId: s.id, title: s.title, subject: s.subject, plan: buildPlan(s.durationMin, s.preset) });
   location.hash = '#/focus';
 }
@@ -63,7 +64,7 @@ export function scheduleItem(s) {
   const pct = Math.min(100, ((s.progressMin || 0) / sum.focusMin) * 100);
   const active = getTimer()?.scheduleId === s.id;
   const done = s.status === 'done';
-  const startLabel = active ? 'Buka' : done ? 'Ulangi' : 'Mulai';
+  const startLabel = active ? t('Open') : done ? t('Repeat') : t('Start');
   return `
     <article class="sched ${done ? 'is-done' : ''} ${active ? 'is-active' : ''}" data-id="${s.id}">
       <div class="sched-time">
@@ -72,22 +73,22 @@ export function scheduleItem(s) {
       </div>
       <div class="sched-main">
         <div class="sched-title">
-          ${done ? `<span class="badge badge-done">${icon('check', 12)} Selesai</span>` : ''}
-          ${active ? '<span class="badge badge-live">Berjalan</span>' : ''}
+          ${done ? `<span class="badge badge-done">${icon('check', 12)} ${t('Done')}</span>` : ''}
+          ${active ? `<span class="badge badge-live">${t('Running')}</span>` : ''}
           <h4>${esc(s.title)}</h4>
         </div>
         <div class="sched-meta">
           ${s.subject ? `<span class="chip">${esc(s.subject)}</span>` : ''}
           <span>${icon('clock', 13)} ${fmtMin(s.durationMin)}</span>
-          <span>${icon('timer', 13)} ${presetLabel(s.preset)} · ${sum.focusCount} sesi</span>
+          <span>${icon('timer', 13)} ${presetLabel(s.preset)} · ${t('{n} sessions', { n: sum.focusCount })}</span>
           ${s.pdfIds?.length ? `<span>${icon('file', 13)} ${s.pdfIds.length} PDF</span>` : ''}
         </div>
-        <div class="progress" title="${fmtMin(s.progressMin || 0)} dari ${fmtMin(sum.focusMin)} fokus"><i style="width:${pct}%"></i></div>
+        <div class="progress" title="${t('{done} of {total} focus', { done: fmtMin(s.progressMin || 0), total: fmtMin(sum.focusMin) })}"><i style="width:${pct}%"></i></div>
       </div>
       <div class="sched-actions">
         <button class="btn btn-primary btn-sm" data-action="start">${icon(active ? 'timer' : 'play', 14)} ${startLabel}</button>
-        <button class="icon-btn" data-action="edit" aria-label="Edit">${icon('edit', 16)}</button>
-        <button class="icon-btn" data-action="delete" aria-label="Hapus">${icon('trash', 16)}</button>
+        <button class="icon-btn" data-action="edit" aria-label="${t('Edit')}">${icon('edit', 16)}</button>
+        <button class="icon-btn" data-action="delete" aria-label="${t('Delete')}">${icon('trash', 16)}</button>
       </div>
     </article>`;
 }
@@ -103,10 +104,10 @@ export function bindScheduleActions(container) {
     if (action === 'edit') openScheduleForm(getSchedule(id));
     if (action === 'delete') {
       const s = getSchedule(id);
-      if (getTimer()?.scheduleId === id) return toast('Hentikan sesi yang berjalan dulu');
-      if (await confirmDialog(`Hapus jadwal "${s.title}"?`, { okText: 'Hapus', danger: true })) {
+      if (getTimer()?.scheduleId === id) return toast(t('Stop the running session first'));
+      if (await confirmDialog(t('Delete schedule "{title}"?', { title: s.title }), { okText: t('Delete'), danger: true })) {
         deleteSchedule(id);
-        toast('Jadwal dihapus');
+        toast(t('Schedule deleted'));
       }
     }
   };
@@ -141,31 +142,31 @@ export async function openScheduleForm(existing = null, defaults = {}) {
   form.className = 'form';
   form.innerHTML = `
     <label class="field">
-      <span>Judul</span>
-      <input name="title" required maxlength="80" placeholder="mis. Latihan soal termodinamika" value="${esc(s.title)}" />
+      <span>${t('Title')}</span>
+      <input name="title" required maxlength="80" placeholder="${t('e.g. Thermodynamics practice problems')}" value="${esc(s.title)}" />
     </label>
     <div class="row">
       <label class="field">
-        <span>Mata pelajaran</span>
-        <input name="subject" list="subject-list" maxlength="40" placeholder="mis. Fisika" value="${esc(s.subject)}" />
+        <span>${t('Subject')}</span>
+        <input name="subject" list="subject-list" maxlength="40" placeholder="${t('e.g. Physics')}" value="${esc(s.subject)}" />
         <datalist id="subject-list">${subjects.map((x) => `<option value="${esc(x)}">`).join('')}</datalist>
       </label>
     </div>
     <div class="row">
-      <label class="field"><span>Tanggal</span><input type="date" name="date" required value="${s.date}" /></label>
-      <label class="field"><span>Jam mulai</span><input type="time" name="startTime" required value="${s.startTime}" /></label>
+      <label class="field"><span>${t('Date')}</span><input type="date" name="date" required value="${s.date}" /></label>
+      <label class="field"><span>${t('Start time')}</span><input type="time" name="startTime" required value="${s.startTime}" /></label>
     </div>
     <div class="field">
-      <span>Durasi</span>
+      <span>${t('Duration')}</span>
       <div data-duration></div>
     </div>
     <div class="field">
-      <span>Preset pomodoro</span>
+      <span>${t('Pomodoro preset')}</span>
       <div class="segmented" role="radiogroup">
         ${Object.entries(PRESETS)
           .map(([k, p]) => `<label><input type="radio" name="preset" value="${k}" ${s.preset.key === k ? 'checked' : ''} /><span>${p.label}</span></label>`)
           .join('')}
-        <label><input type="radio" name="preset" value="custom" ${s.preset.key === 'custom' ? 'checked' : ''} /><span>Custom</span></label>
+        <label><input type="radio" name="preset" value="custom" ${s.preset.key === 'custom' ? 'checked' : ''} /><span>${t('Custom')}</span></label>
       </div>
       <div class="custom-preset" ${s.preset.key === 'custom' ? '' : 'hidden'}>
 
@@ -173,7 +174,7 @@ export async function openScheduleForm(existing = null, defaults = {}) {
     </div>
     <div class="plan-preview" aria-live="polite"></div>
     <div class="field">
-      <span>Referensi PDF</span>
+      <span>${t('PDF references')}</span>
       ${
         pdfs.length
           ? `<div class="pdf-pick">${pdfs
@@ -182,25 +183,25 @@ export async function openScheduleForm(existing = null, defaults = {}) {
                   ${icon('file', 14)}<span>${esc(p.name)}</span></label>`,
               )
               .join('')}</div>`
-          : `<p class="muted small">Belum ada PDF. Upload dulu di <a href="#/library">Library</a>.</p>`
+          : `<p class="muted small">${t('No PDFs yet. Upload one in the <a href="#/library">Library</a> first.')}</p>`
       }
     </div>
     <div class="modal-actions">
-      <button type="button" class="btn" data-cancel>Batal</button>
-      <button type="submit" class="btn" data-mode="save">Simpan</button>
-      <button type="submit" class="btn btn-primary" data-mode="start">${icon('play', 14)} Simpan & mulai</button>
+      <button type="button" class="btn" data-cancel>${t('Cancel')}</button>
+      <button type="submit" class="btn" data-mode="save">${t('Save')}</button>
+      <button type="submit" class="btn btn-primary" data-mode="start">${icon('play', 14)} ${t('Save & start')}</button>
     </div>`;
 
   const duration = createDurationPicker({ value: s.durationMin, min: 5, max: 720, presets: [30, 60, 120, 180, 240] });
   form.querySelector('[data-duration]').append(duration.el);
   form.querySelector('.custom-preset').append(
-    createStepper({ name: 'c_focus', label: 'Fokus', value: custom.focus, min: 5, max: 240, step: 5 }).el,
-    createStepper({ name: 'c_short', label: 'Istirahat', value: custom.short, min: 1, max: 60 }).el,
-    createStepper({ name: 'c_long', label: 'Ist. panjang', value: custom.long, min: 1, max: 90 }).el,
-    createStepper({ name: 'c_longEvery', label: 'Panjang tiap', value: custom.longEvery, min: 1, max: 12, unit: 'sesi' }).el,
+    createStepper({ name: 'c_focus', label: t('Focus'), value: custom.focus, min: 5, max: 240, step: 5 }).el,
+    createStepper({ name: 'c_short', label: t('Break'), value: custom.short, min: 1, max: 60 }).el,
+    createStepper({ name: 'c_long', label: t('Long brk.'), value: custom.long, min: 1, max: 90 }).el,
+    createStepper({ name: 'c_longEvery', label: t('Long every'), value: custom.longEvery, min: 1, max: 12, unit: t('sessions') }).el,
   );
 
-  const modal = openModal({ title: existing ? 'Edit jadwal' : 'Jadwal baru', content: form, wide: true });
+  const modal = openModal({ title: existing ? t('Edit schedule') : t('New schedule'), content: form, wide: true });
   const $ = (name) => form.elements[name];
 
   const read = () => {
@@ -223,11 +224,11 @@ export async function openScheduleForm(existing = null, defaults = {}) {
     const sum = planSummary(plan);
     preview.innerHTML = `
       <div class="plan-head">
-        <span>Pembagian otomatis untuk <strong>${fmtMin(durationMin)}</strong>${$('startTime').value ? ` · selesai pukul <strong>${addMinutesToTime($('startTime').value, durationMin)}</strong>` : ''}</span>
-        <span class="muted small">${sum.focusCount} sesi fokus · ${fmtMin(sum.focusMin)} fokus · ${fmtMin(sum.breakMin)} istirahat</span>
+        <span>${t('Automatic split for <strong>{time}</strong>', { time: fmtMin(durationMin) })}${$('startTime').value ? t(' · ends at <strong>{time}</strong>', { time: addMinutesToTime($('startTime').value, durationMin) }) : ''}</span>
+        <span class="muted small">${t('{n} focus sessions · {focus} focus · {brk} break', { n: sum.focusCount, focus: fmtMin(sum.focusMin), brk: fmtMin(sum.breakMin) })}</span>
       </div>
       ${segmentBar(plan)}
-      <div class="plan-legend"><span class="lg lg-focus">Fokus</span><span class="lg lg-short">Istirahat</span><span class="lg lg-long">Istirahat panjang</span></div>`;
+      <div class="plan-legend"><span class="lg lg-focus">${t('Focus')}</span><span class="lg lg-short">${t('Break')}</span><span class="lg lg-long">${t('Long break')}</span></div>`;
   };
 
   form.addEventListener('input', updatePreview);
@@ -257,13 +258,13 @@ export async function openScheduleForm(existing = null, defaults = {}) {
     }
     modal.close();
     if (mode === 'start') startSchedule(id);
-    else toast(existing ? 'Jadwal diperbarui' : 'Jadwal ditambahkan');
+    else toast(existing ? t('Schedule updated') : t('Schedule added'));
   });
 }
 
 // ---------------------------------------------------------------- View
 
-const FILTERS = { upcoming: 'Mendatang', today: 'Hari ini', done: 'Selesai', all: 'Semua' };
+const FILTERS = { upcoming: t('Upcoming'), today: t('Today'), done: t('Completed'), all: t('All') };
 
 export function renderSchedule(el) {
   let filter = load('scheduleFilter', 'upcoming');
@@ -284,10 +285,10 @@ export function renderSchedule(el) {
     el.innerHTML = `
       <header class="page-head">
         <div>
-          <h1>Jadwal</h1>
-          <p class="muted">Atur durasinya, pomodoro akan dibagi otomatis.</p>
+          <h1>${t('Schedule')}</h1>
+          <p class="muted">${t('Set the duration and the pomodoro split is calculated automatically.')}</p>
         </div>
-        <button class="btn btn-primary" data-new>${icon('plus', 16)} Jadwal baru</button>
+        <button class="btn btn-primary" data-new>${icon('plus', 16)} ${t('New schedule')}</button>
       </header>
       <div class="tabs" role="tablist">
         ${Object.entries(FILTERS)
@@ -309,8 +310,8 @@ export function renderSchedule(el) {
                 .join('')
             : `<div class="empty">
                 <div class="empty-icon">${icon('calendar', 28)}</div>
-                <p>Belum ada jadwal di sini.</p>
-                <button class="btn" data-new>${icon('plus', 16)} Buat jadwal pertama</button>
+                <p>${t('No schedules here yet.')}</p>
+                <button class="btn" data-new>${icon('plus', 16)} ${t('Create your first schedule')}</button>
               </div>`
         }
       </div>`;

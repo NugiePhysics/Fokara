@@ -3,13 +3,14 @@ import { load, save, emit } from '../store.js';
 import { chime } from '../utils/sound.js';
 import { fmtClock, fmtMin } from '../utils/time.js';
 import { toast } from '../ui.js';
+import { t } from '../i18n.js';
 
 export const PRESETS = {
   classic: { label: '25 / 5', focus: 25, short: 5, long: 15, longEvery: 4 },
   deep: { label: '50 / 10', focus: 50, short: 10, long: 20, longEvery: 3 },
 };
 
-export const SEGMENT_LABEL = { focus: 'Fokus', short: 'Istirahat singkat', long: 'Istirahat panjang' };
+export const SEGMENT_LABEL = { focus: t('Focus'), short: t('Short break'), long: t('Long break') };
 
 export function makePreset(key, custom = {}) {
   if (key !== 'custom') return { key, ...PRESETS[key] };
@@ -23,7 +24,7 @@ export function makePreset(key, custom = {}) {
 }
 
 export function presetLabel(p) {
-  return p.key === 'custom' ? `Custom ${p.focus} / ${p.short}` : PRESETS[p.key]?.label ?? '';
+  return p.key === 'custom' ? `${t('Custom')} ${p.focus} / ${p.short}` : PRESETS[p.key]?.label ?? '';
 }
 
 function clampInt(v, min, max, fallback) {
@@ -185,7 +186,7 @@ export function stopSession({ silent = false } = {}) {
   persist();
   emit('timer:stop', stopped);
   updateTitle();
-  if (!silent) toast(`Sesi dihentikan · ${fmtMin(stopped.focusDoneMin)} fokus tercatat`);
+  if (!silent) toast(t('Session stopped · {time} of focus logged', { time: fmtMin(stopped.focusDoneMin) }));
 }
 
 function elapsedInSegmentMin() {
@@ -223,7 +224,7 @@ function finish() {
   emit('timer:complete', done);
   emit('timer', null);
   chime('done');
-  notify('Sesi selesai 🎉', `${done.title}: ${fmtMin(done.focusDoneMin)} fokus`);
+  notify(t('Session complete 🎉'), t('{title}: {time} of focus', { title: done.title, time: fmtMin(done.focusDoneMin) }));
   updateTitle();
 }
 
@@ -233,7 +234,7 @@ function announce(withSound = true) {
   if (!withSound) return;
   const isFocus = seg.type === 'focus';
   chime(isFocus ? 'focus' : 'break');
-  notify(isFocus ? 'Waktunya fokus' : 'Waktunya istirahat', `${SEGMENT_LABEL[seg.type]} · ${seg.min} menit`);
+  notify(isFocus ? t('Time to focus') : t('Time for a break'), t('{label} · {n} minutes', { label: SEGMENT_LABEL[seg.type], n: seg.min }));
 }
 
 function tick() {
@@ -293,7 +294,7 @@ export function initTimer() {
     }
     if (state) {
       persist();
-      setTimeout(() => toast('Timer dijeda di posisi terakhir karena halaman sempat ditutup'), 400);
+      setTimeout(() => toast(t('Timer paused at its last position because the page was closed')), 400);
     }
   }
   const flush = () => {

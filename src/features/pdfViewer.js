@@ -2,6 +2,7 @@
 import { dbGet, dbPut } from '../db.js';
 import { load, save } from '../store.js';
 import { icon } from '../ui.js';
+import { t } from '../i18n.js';
 
 let pdfjsPromise;
 function getPdfjs() {
@@ -81,18 +82,18 @@ export function createPdfViewer(container, pdfId, { compact = false } = {}) {
     <div class="pdfv ${compact ? 'pdfv-compact' : ''}">
       <div class="pdfv-toolbar">
         <div class="pdfv-group">
-          <button class="icon-btn" data-pv="prev" aria-label="Halaman sebelumnya">${icon('chevL')}</button>
-          <span class="pdfv-page"><input type="number" min="1" value="1" aria-label="Nomor halaman" /> / <span data-pv-total>–</span></span>
-          <button class="icon-btn" data-pv="next" aria-label="Halaman berikutnya">${icon('chevR')}</button>
+          <button class="icon-btn" data-pv="prev" aria-label="${t('Previous page')}">${icon('chevL')}</button>
+          <span class="pdfv-page"><input type="number" min="1" value="1" aria-label="${t('Page number')}" /> / <span data-pv-total>–</span></span>
+          <button class="icon-btn" data-pv="next" aria-label="${t('Next page')}">${icon('chevR')}</button>
         </div>
         <div class="pdfv-group">
-          <button class="icon-btn" data-pv="out" aria-label="Perkecil">${icon('zoomOut')}</button>
-          <button class="btn btn-ghost btn-sm" data-pv="fit" title="Sesuaikan lebar"><span data-pv-zoom>100%</span></button>
-          <button class="icon-btn" data-pv="in" aria-label="Perbesar">${icon('zoomIn')}</button>
-          <button class="icon-btn" data-pv="open" aria-label="Buka di tab baru" title="Buka di tab baru">${icon('external')}</button>
+          <button class="icon-btn" data-pv="out" aria-label="${t('Zoom out')}">${icon('zoomOut')}</button>
+          <button class="btn btn-ghost btn-sm" data-pv="fit" title="${t('Fit width')}"><span data-pv-zoom>100%</span></button>
+          <button class="icon-btn" data-pv="in" aria-label="${t('Zoom in')}">${icon('zoomIn')}</button>
+          <button class="icon-btn" data-pv="open" aria-label="${t('Open in new tab')}" title="${t('Open in new tab')}">${icon('external')}</button>
         </div>
       </div>
-      <div class="pdfv-stage" tabindex="0"><div class="pdfv-loading">Memuat PDF…</div><div class="pdfv-pages"></div></div>
+      <div class="pdfv-stage" tabindex="0"><div class="pdfv-loading">${t('Loading PDF…')}</div><div class="pdfv-pages"></div></div>
     </div>`;
 
   const stage = container.querySelector('.pdfv-stage');
@@ -238,7 +239,7 @@ export function createPdfViewer(container, pdfId, { compact = false } = {}) {
   (async () => {
     try {
       record = await dbGet('pdfs', pdfId);
-      if (!record) throw new Error('PDF tidak ditemukan');
+      if (!record) throw new Error(t('PDF not found'));
       const lib = await getPdfjs();
       const data = new Uint8Array(await record.blob.arrayBuffer());
       if (destroyed) return;
@@ -283,7 +284,7 @@ export function createPdfViewer(container, pdfId, { compact = false } = {}) {
     } catch (err) {
       console.error(err);
       const loading = container.querySelector('.pdfv-loading');
-      if (loading) loading.textContent = `Gagal membuka PDF: ${err.message}`;
+      if (loading) loading.textContent = t('Could not open PDF: {msg}', { msg: err.message });
     }
   })();
 

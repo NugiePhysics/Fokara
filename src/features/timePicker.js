@@ -4,6 +4,7 @@ import { getSettings, updateSettings } from '../store.js';
 import { icon } from '../ui.js';
 import { fmtMin } from '../utils/time.js';
 import { tick } from '../utils/sound.js';
+import { t } from '../i18n.js';
 
 const soundOn = () => getSettings().sliderSound !== false;
 
@@ -65,22 +66,22 @@ export function createDurationPicker({ value = 60, min = 5, max = 480, step = 5,
 
   const unit = (key, label, digits, stepLabel) => `
     <div class="tp-unit" data-unit="${key}">
-      <button type="button" class="tp-arrow" data-dir="1" data-unit="${key}" aria-label="Tambah ${stepLabel}">${icon('chevU', 18)}</button>
+      <button type="button" class="tp-arrow" data-dir="1" data-unit="${key}" aria-label="${t('Add {step}', { step: stepLabel })}">${icon('chevU', 18)}</button>
       <div class="tp-value" tabindex="0" role="spinbutton" aria-label="${label}" data-unit="${key}">
         <span class="tp-num">${Array.from({ length: digits }, roller).join('')}</span>
       </div>
-      <button type="button" class="tp-arrow" data-dir="-1" data-unit="${key}" aria-label="Kurangi ${stepLabel}">${icon('chevD', 18)}</button>
+      <button type="button" class="tp-arrow" data-dir="-1" data-unit="${key}" aria-label="${t('Subtract {step}', { step: stepLabel })}">${icon('chevD', 18)}</button>
       <span class="tp-label">${label}</span>
     </div>`;
 
   const el = document.createElement('div');
   el.className = 'tp';
   el.innerHTML = `
-    <button type="button" class="icon-btn sm tp-sound" aria-label="Suara"></button>
+    <button type="button" class="icon-btn sm tp-sound" aria-label="${t('Sound')}"></button>
     <div class="tp-main">
-      ${unit('h', 'jam', hourDigits, '1 jam')}
+      ${unit('h', t('hours'), hourDigits, t('{n} hour', { n: 1 }))}
       <span class="tp-sep" aria-hidden="true">:</span>
-      ${unit('m', 'menit', 2, `${step} menit`)}
+      ${unit('m', t('minutes'), 2, t('{n} minutes', { n: step }))}
     </div>
     ${
       presets.length
@@ -94,7 +95,7 @@ export function createDurationPicker({ value = 60, min = 5, max = 480, step = 5,
   const paintSound = () => {
     soundBtn.innerHTML = icon(soundOn() ? 'volume' : 'mute', 14);
     soundBtn.classList.toggle('on', soundOn());
-    soundBtn.title = soundOn() ? 'Matikan suara' : 'Nyalakan suara';
+    soundBtn.title = soundOn() ? t('Mute sound') : t('Unmute sound');
   };
 
   function render(prev) {
@@ -110,7 +111,7 @@ export function createDurationPicker({ value = 60, min = 5, max = 480, step = 5,
     hv.setAttribute('aria-valuemax', Math.floor(max / 60));
     const mv = mUnit.querySelector('.tp-value');
     mv.setAttribute('aria-valuenow', m);
-    mv.setAttribute('aria-valuetext', `${m} menit, total ${fmtMin(current)}`);
+    mv.setAttribute('aria-valuetext', t('{m} minutes, total {total}', { m, total: fmtMin(current) }));
     el.querySelectorAll('[data-set]').forEach((b) => b.classList.toggle('active', Number(b.dataset.set) === current));
     // Tombol panah redup saat sudah di batas.
     el.querySelectorAll('.tp-arrow').forEach((b) => {
@@ -209,16 +210,16 @@ export function createDurationPicker({ value = 60, min = 5, max = 480, step = 5,
 
 // ---------------------------------------------------------------- Stepper kecil
 
-export function createStepper({ name, label, value, min = 1, max = 99, step = 1, unit = 'mnt' }) {
+export function createStepper({ name, label, value, min = 1, max = 99, step = 1, unit = t('min') }) {
   let current = Math.min(max, Math.max(min, Number(value) || min));
   const el = document.createElement('div');
   el.className = 'stp';
   el.innerHTML = `
     <span class="stp-label">${label}</span>
     <div class="stp-ctrl">
-      <button type="button" class="stp-btn" data-dir="-1" aria-label="Kurangi ${label}">${icon('minus', 14)}</button>
+      <button type="button" class="stp-btn" data-dir="-1" aria-label="${t('Decrease {label}', { label })}">${icon('minus', 14)}</button>
       <span class="stp-val" role="spinbutton" tabindex="0" aria-label="${label}"><b>${current}</b><small>${unit}</small></span>
-      <button type="button" class="stp-btn" data-dir="1" aria-label="Tambah ${label}">${icon('plus', 14)}</button>
+      <button type="button" class="stp-btn" data-dir="1" aria-label="${t('Increase {label}', { label })}">${icon('plus', 14)}</button>
     </div>
     <input type="hidden" name="${name}" value="${current}" />`;
   const hidden = el.querySelector('input');

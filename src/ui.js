@@ -1,4 +1,5 @@
 // Komponen UI bersama: ikon, escape HTML, toast, modal.
+import { t } from './i18n.js';
 const ICONS = {
   home: '<path d="M3 10.5 12 3l9 7.5V20a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z"/>',
   calendar: '<rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/>',
@@ -76,7 +77,7 @@ export function openModal({ title, content = '', wide = false, onClose } = {}) {
     <div class="modal ${wide ? 'modal-wide' : ''}" role="dialog" aria-modal="true" aria-label="${esc(title)}">
       <header class="modal-head">
         <h3>${esc(title)}</h3>
-        <button class="icon-btn" data-close aria-label="Tutup">${icon('x')}</button>
+        <button class="icon-btn" data-close aria-label="${t('Close')}">${icon('x')}</button>
       </header>
       <div class="modal-body"></div>
     </div>`;
@@ -107,13 +108,13 @@ export function openModal({ title, content = '', wide = false, onClose } = {}) {
   return { el: backdrop.querySelector('.modal'), body, close };
 }
 
-export function confirmDialog(message, { title = 'Konfirmasi', okText = 'Ya', danger = false } = {}) {
+export function confirmDialog(message, { title = t('Confirm'), okText = t('Yes'), danger = false } = {}) {
   return new Promise((resolve) => {
     const modal = openModal({
       title,
       content: `<p class="muted">${esc(message)}</p>
         <div class="modal-actions">
-          <button class="btn" data-no>Batal</button>
+          <button class="btn" data-no>${t('Cancel')}</button>
           <button class="btn ${danger ? 'btn-danger' : 'btn-primary'}" data-yes>${esc(okText)}</button>
         </div>`,
       onClose: (result) => resolve(result === true),
