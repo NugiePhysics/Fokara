@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang="id">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="description" content="Fokara: study planner minimalis dengan jadwal belajar, pomodoro otomatis, tracking harian, musik, dan referensi PDF." />
+    <title>Fokara</title>
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500&display=swap" rel="stylesheet" />
+    <script>
+      // Terapkan tema sebelum render untuk menghindari kedipan.
+      try {
+        const s = JSON.parse(localStorage.getItem('studyplan:settings') || '{}');
+        const t = s.theme || (matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+        document.documentElement.dataset.theme = t;
+        if (s.sidebarHidden) document.documentElement.dataset.sidebar = 'hidden';
+      } catch {}
+    </script>
+  </head>
+  <body>
+    <div id="wallpaper" aria-hidden="true"></div>
+    <div class="shell">
+      <aside class="sidebar">
+        <a href="#/today" class="brand">fokara<span>.</span></a>
+        <nav class="nav" id="nav"></nav>
+        <div class="sidebar-foot">
+          <button class="icon-btn" id="theme-toggle" aria-label="Ganti tema"></button>
+          <button class="icon-btn sidebar-hide" id="sidebar-hide" aria-label="Sembunyikan sidebar" title="Sembunyikan sidebar ( [ )"></button>
+        </div>
+      </aside>
+      <main class="main">
+        <div id="view" class="view"></div>
+      </main>
+    </div>
+    <button class="sidebar-show icon-btn" id="sidebar-show" aria-label="Tampilkan sidebar" title="Tampilkan sidebar ( [ )"></button>
+    <div id="player"></div>
+    <div id="modal-root"></div>
+    <div id="toast-root"></div>
+    <script type="module" src="/src/main.js"></script>
+  </body>
+</html>
