@@ -12,6 +12,7 @@
     "vite": "^6.4.4"
   },
   "dependencies": {
+    "@supabase/supabase-js": "^2.117.3",
     "pdfjs-dist": "^4.10.38"
   }
 }

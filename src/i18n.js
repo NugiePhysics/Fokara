@@ -290,4 +290,26 @@ const ID = {
   'Choose an image or video file': 'Pilih file gambar atau video',
   '{name} is too large (max {max})': '{name} terlalu besar (maks {max})',
   'Wallpaper added': 'Wallpaper ditambahkan',
+
+  // Akun & sinkronisasi
+  Account: 'Akun',
+  'Sign in with Google': 'Masuk dengan Google',
+  'Sign out': 'Keluar',
+  'Sync now': 'Sinkronkan',
+  'Syncing…': 'Menyinkronkan…',
+  'Sync failed': 'Sinkronisasi gagal',
+  'Sync paused': 'Sinkronisasi ditunda',
+  'Not synced yet': 'Belum disinkronkan',
+  'Last synced {time}': 'Terakhir sinkron {time}',
+  'Signing in is optional. Sign in to sync schedules, tracking and settings across devices.':
+    'Login bersifat opsional. Masuk untuk menyinkronkan jadwal, tracking, dan pengaturan antar perangkat.',
+  'PDFs, music files and wallpapers stay on this device.': 'PDF, file musik, dan wallpaper tetap di perangkat ini.',
+  'Sign-in failed: {msg}': 'Gagal masuk: {msg}',
+  'Signed out. Your data stays on this device.': 'Berhasil keluar. Data tetap tersimpan di perangkat ini.',
+  'Sync failed. Your data is still saved on this device.': 'Sinkronisasi gagal. Data tetap tersimpan di perangkat ini.',
+  'Choose which data to keep': 'Pilih data yang dipakai',
+  'This device and your cloud account both have data (cloud updated {date}). Which one should be kept?':
+    'Perangkat ini dan akun cloud sama-sama punya data (cloud diperbarui {date}). Mana yang ingin dipakai?',
+  "Upload this device's data": 'Unggah data perangkat ini',
+  'Use cloud data': 'Pakai data cloud',
 };

@@ -15,6 +15,7 @@ import { initMusic, toggleMusic } from './features/music.js';
 import { initWallpaper } from './features/wallpaper.js';
 import { setSidebarHidden, toggleSidebar } from './utils/sidebar.js';
 import { initFullscreen, toggleFullscreen, isFullscreen, exitFullscreen } from './utils/fullscreen.js';
+import { accountEnabled, initAccount, getAccount, avatarHtml, openAccountModal } from './features/account.js';
 
 const ROUTES = {
   today: { label: t('Today'), icon: 'home', render: renderToday },
@@ -80,6 +81,22 @@ langBtn.title = lang() === 'en' ? 'Ganti ke Bahasa Indonesia' : 'Switch to Engli
 langBtn.setAttribute('aria-label', langBtn.title);
 langBtn.addEventListener('click', () => setLang(lang() === 'en' ? 'id' : 'en'));
 hideBtn.addEventListener('click', () => setSidebarHidden(true));
+
+// Akun Google (opsional): tombol hanya muncul jika Supabase dikonfigurasi.
+const accountBtn = document.getElementById('account-toggle');
+function paintAccountButton() {
+  const { user, status } = getAccount();
+  accountBtn.innerHTML = avatarHtml();
+  accountBtn.className = `icon-btn account-btn is-${status}`;
+  accountBtn.title = user ? user.user_metadata?.full_name || user.email : t('Sign in with Google');
+  accountBtn.setAttribute('aria-label', t('Account'));
+}
+if (accountEnabled()) {
+  accountBtn.hidden = false;
+  accountBtn.addEventListener('click', openAccountModal);
+  paintAccountButton();
+  on('account', paintAccountButton);
+}
 showBtn.addEventListener('click', () => setSidebarHidden(false));
 
 // Shortcut keyboard global
@@ -105,6 +122,7 @@ initTimer();
 initMusic();
 initWallpaper();
 initFullscreen();
+initAccount().catch((err) => console.warn('[account]', err));
 paintNavDot();
 on('timer', paintNavDot);
 
