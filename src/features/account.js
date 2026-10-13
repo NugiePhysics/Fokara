@@ -8,7 +8,7 @@ const URL_ = import.meta.env.VITE_SUPABASE_URL;
 const KEY = import.meta.env.VITE_SUPABASE_ANON_KEY;
 const TABLE = 'user_data';
 // Hanya data JSON kecil; PDF, MP3, wallpaper (IndexedDB) tetap di perangkat.
-const SYNC_KEYS = ['schedules', 'tracking', 'settings', 'music', 'quickDuration'];
+const SYNC_KEYS = ['schedules', 'subjects', 'tracking', 'settings', 'music', 'quickDuration'];
 const PUSH_DELAY = 2000;
 
 let supabase = null;

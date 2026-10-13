@@ -22,6 +22,13 @@ function deleteSchedule(id) {
   setSchedules(getSchedules().filter((s) => s.id !== id));
 }
 
+/** Label mata pelajaran tersimpan; sebelum pernah diubah, diturunkan dari jadwal yang sudah ada. */
+const getSubjects = () => load('subjects', null) ?? uniqueLabels(getSchedules().map((x) => x.subject));
+const uniqueLabels = (list) => {
+  const seen = new Set();
+  return list.filter((x) => x && !seen.has(x.toLowerCase()) && seen.add(x.toLowerCase()));
+};
+
 const sortSchedules = (a, b) => (a.date + a.startTime).localeCompare(b.date + b.startTime);
 
 export function schedulesOn(key) {
@@ -135,7 +142,8 @@ export async function openScheduleForm(existing = null, defaults = {}) {
     preset: makePreset('classic'),
     pdfIds: [],
   };
-  const subjects = [...new Set(getSchedules().map((x) => x.subject).filter(Boolean))];
+  let subjects = uniqueLabels([...getSubjects(), s.subject]);
+  let subject = s.subject || '';
   const custom = s.preset.key === 'custom' ? s.preset : { focus: 30, short: 5, long: 15, longEvery: 4 };
 
   const form = document.createElement('form');
@@ -146,11 +154,11 @@ export async function openScheduleForm(existing = null, defaults = {}) {
       <input name="title" required maxlength="80" placeholder="${t('e.g. Thermodynamics practice problems')}" value="${esc(s.title)}" />
     </label>
     <div class="row">
-      <label class="field">
+      <div class="field">
         <span>${t('Subject')}</span>
-        <input name="subject" list="subject-list" maxlength="40" placeholder="${t('e.g. Physics')}" value="${esc(s.subject)}" />
-        <datalist id="subject-list">${subjects.map((x) => `<option value="${esc(x)}">`).join('')}</datalist>
-      </label>
+        <input type="hidden" name="subject" value="${esc(subject)}" />
+        <div class="label-picker" data-subjects></div>
+      </div>
     </div>
     <div class="row">
       <label class="field"><span>${t('Date')}</span><input type="date" name="date" required value="${s.date}" /></label>
@@ -216,6 +224,67 @@ export async function openScheduleForm(existing = null, defaults = {}) {
     return { durationMin, preset };
   };
 
+  // Pemilih label: klik untuk memilih/melepas, "+ New label" untuk membuat, × untuk menghapus dari daftar.
+  const picker = form.querySelector('[data-subjects]');
+  const saveSubjects = () => save('subjects', subjects);
+  const drawSubjects = (adding = false) => {
+    $('subject').value = subject;
+    picker.innerHTML = `
+      ${subjects
+        .map(
+          (x) => `<span class="label-chip ${x === subject ? 'active' : ''}">
+            <button type="button" class="label-pick" data-pick="${esc(x)}" aria-pressed="${x === subject}">${esc(x)}</button>
+            <button type="button" class="label-del" data-del="${esc(x)}" aria-label="${t('Delete label')}">${icon('x', 12)}</button>
+          </span>`,
+        )
+        .join('')}
+      ${
+        adding
+          ? `<input class="label-input" maxlength="40" placeholder="${t('Label name')}" />`
+          : `<button type="button" class="chip-btn label-add" data-add>${icon('plus', 14)} ${t('New label')}</button>`
+      }`;
+    if (adding) picker.querySelector('.label-input').focus();
+  };
+  const addLabel = (raw) => {
+    const name = raw.trim();
+    if (name) {
+      subject = subjects.find((x) => x.toLowerCase() === name.toLowerCase()) || name;
+      if (!subjects.includes(subject)) {
+        subjects = [...subjects, subject];
+        saveSubjects();
+      }
+    }
+    drawSubjects();
+  };
+  picker.addEventListener('click', (e) => {
+    const pick = e.target.closest('[data-pick]');
+    const del = e.target.closest('[data-del]');
+    if (pick) {
+      subject = subject === pick.dataset.pick ? '' : pick.dataset.pick;
+      drawSubjects();
+    } else if (del) {
+      subjects = subjects.filter((x) => x !== del.dataset.del);
+      if (subject === del.dataset.del) subject = '';
+      saveSubjects();
+      drawSubjects();
+    } else if (e.target.closest('[data-add]')) drawSubjects(true);
+  });
+  picker.addEventListener('keydown', (e) => {
+    if (!e.target.matches('.label-input')) return;
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      addLabel(e.target.value);
+    } else if (e.key === 'Escape') {
+      e.preventDefault();
+      e.stopPropagation();
+      drawSubjects();
+    }
+  });
+  picker.addEventListener('focusout', (e) => {
+    if (e.target.matches('.label-input') && e.target.isConnected && !picker.contains(e.relatedTarget)) addLabel(e.target.value);
+  });
+  drawSubjects();
+
   const preview = form.querySelector('.plan-preview');
   const updatePreview = () => {
     const { durationMin, preset } = read();
@@ -241,7 +310,7 @@ export async function openScheduleForm(existing = null, defaults = {}) {
     const { durationMin, preset } = read();
     const data = {
       title: $('title').value.trim(),
-      subject: $('subject').value.trim(),
+      subject,
       date: $('date').value,
       startTime: $('startTime').value,
       durationMin,
